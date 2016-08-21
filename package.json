@@ -8,7 +8,7 @@
   "scripts": {
     "clean:test": "rm -rf tmp coverage",
     "clean:build": "rm -rf dist",
-    "prebuild": "eslint src test",
+    "prebuild": "eslint .",
     "build": "npm run clean:build && rollup -c",
     "watch": "npm run clean:build && rollup -c -w",
     "pretest": "npm run clean:test && rollup -c --environment TESTING",
