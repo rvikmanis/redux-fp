@@ -1,9 +1,9 @@
-import { reduceCurriedReducers, combineCurriedReducers } from '../';
+import { reduceReducers, combineReducers } from '../';
 import { strictEqual, deepEqual } from 'assert';
 
-describe('reduceCurriedReducers', () => {
+describe('reduceReducers', () => {
   it('reduces curried reducers', () => {
-    const result = reduceCurriedReducers(
+    const result = reduceReducers(
       a => s => a + s,
       a => s => a * s
     )(5)(20)
@@ -11,7 +11,7 @@ describe('reduceCurriedReducers', () => {
   });
 });
 
-describe('combineCurriedReducers', () => {
+describe('combineReducers', () => {
   it('combines curried reducers', () => {
     const every = action => (state = []) => {
       return state.concat(action)
@@ -21,7 +21,7 @@ describe('combineCurriedReducers', () => {
       return Object.assign({}, state, { [action.type]: action.payload })
     }
 
-    const combinedReducer = combineCurriedReducers({
+    const combinedReducer = combineReducers({
       every,
       latestByType
     })
