@@ -11,7 +11,7 @@ type CurriedReducer<S, A> = (action: A) => (prevState: S) => S
  *
  * More info: http://redux.js.org/docs/api/combineReducers.html
  */
-export function combineReducers(reducers: Mapping<CurriedReducer>): CurriedReducer {
+export function combineReducers(reducers: Mapping<CurriedReducer<*, *>>): CurriedReducer<*, *> {
   const reducer = combineNormalReducers(
     mapValues(reducers, fn => (s, a) => fn(a)(s))
   )
@@ -23,7 +23,7 @@ export function combineReducers(reducers: Mapping<CurriedReducer>): CurriedReduc
  *
  * More info: https://github.com/acdlite/reduce-reducers
  */
-export function reduceReducers(...reducers: CurriedReducer[]): CurriedReducer {
+export function reduceReducers(...reducers: CurriedReducer<*, *>[]): CurriedReducer<*, *> {
   return current => previous =>
     reducers.reduce(
       (p, r) => r(current)(p),
