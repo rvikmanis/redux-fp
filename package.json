@@ -1,7 +1,7 @@
 {
   "name": "redux-curried-reducers",
   "version": "0.0.1",
-  "description": "Sample project for packages built with rollup.",
+  "description": "Curried reducer utility functions for Redux",
   "main": "dist/redux-curried-reducers.js",
   "module": "dist/redux-curried-reducers.mjs",
   "jsnext:main": "dist/redux-curried-reducers.mjs",
