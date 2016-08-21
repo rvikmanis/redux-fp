@@ -1,4 +1,4 @@
-import { reduceReducers, combineReducers } from '../';
+import { reduceReducers, combineReducers } from '../tmp/with-coverage';
 import { strictEqual, deepEqual } from 'assert';
 
 describe('reduceReducers', () => {

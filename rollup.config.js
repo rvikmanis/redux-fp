@@ -7,20 +7,26 @@ import commonJs from 'rollup-plugin-commonjs'
 let pkg = require('./package.json');
 let external = Object.keys(pkg.dependencies);
 
-export default {
+let plugins = [
+  babel(babelrc()),
+  process.env.TESTING
+    ? istanbul({
+        exclude: ['test/**/*', 'node_modules/**/*']
+      })
+    : null,
+  nodeResolve({
+    module: true,
+    jsnext: true,
+    main: true
+  }),
+  commonJs({})
+]
+
+plugins = plugins.filter(Boolean)
+
+let configuration = {
   entry: 'src/index.js',
-  plugins: [
-    babel(babelrc()),
-    istanbul({
-      exclude: ['test/**/*', 'node_modules/**/*']
-    }),
-    nodeResolve({
-      module: true,
-      jsnext: true,
-      main: true
-    }),
-    commonJs({})
-  ],
+  plugins: plugins,
   external: external,
   targets: [
     {
@@ -36,3 +42,11 @@ export default {
     }
   ]
 };
+
+if (process.env.TESTING) {
+  configuration.targets = [{
+    dest: 'tmp/with-coverage.js'
+  }]
+}
+
+export default configuration

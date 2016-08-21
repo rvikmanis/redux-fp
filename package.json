@@ -6,12 +6,14 @@
   "module": "dist/redux-curried-reducers.mjs",
   "jsnext:main": "dist/redux-curried-reducers.mjs",
   "scripts": {
-    "prebuild": "eslint lib test",
-    "build": "rollup -c",
-    "watch": "rollup -c -w",
-    "pretest": "npm run build",
+    "clean:test": "rm -rf tmp coverage",
+    "clean:build": "rm -rf dist",
+    "prebuild": "eslint src test",
+    "build": "npm run clean:build && rollup -c",
+    "watch": "npm run clean:build && rollup -c -w",
+    "pretest": "npm run clean:test && rollup -c --environment TESTING",
     "test": "mocha",
-    "prepublish": "npm test"
+    "prepublish": "npm test && npm run build"
   },
   "repository": {
     "type": "git",
