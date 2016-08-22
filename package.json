@@ -20,13 +20,17 @@
     "url": "git+https://github.com/rvikmanis/redux-curried-reducers.git"
   },
   "keywords": [
-    "es6",
-    "modules",
-    "rollup",
-    "bundle",
-    "browser"
+    "redux",
+    "lodash",
+    "ramda",
+    "functional",
+    "currying",
+    "curry",
+    "curried",
+    "reducer",
+    "reducers"
   ],
-  "author": "Brian Donovan",
+  "author": "Rudolfs Vikmanis",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/rvikmanis/redux-curried-reducers/issues"
