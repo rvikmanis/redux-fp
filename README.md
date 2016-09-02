@@ -2,7 +2,7 @@
 
 Functional programming helpers for Redux.
 
-[![Build Status](https://travis-ci.org/rvikmanis/redux-curried-reducers.svg?branch=master)](https://travis-ci.org/rvikmanis/redux-fp)
+[![Build Status](https://travis-ci.org/rvikmanis/redux-fp.svg?branch=master)](https://travis-ci.org/rvikmanis/redux-fp)
 
 - [Rationale](#rationale)
 - [Installation](#installation)
