@@ -32,7 +32,7 @@ let configuration = {
     {
       dest: pkg['main'],
       format: 'umd',
-      moduleName: 'ReduxCurriedReducers',
+      moduleName: 'ReduxUpdaters',
       sourceMap: true
     },
     {

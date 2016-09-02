@@ -1,32 +1,46 @@
 // @flow
 
-import { combineReducers as combineNormalReducers } from 'redux'
+import { combineReducers } from 'redux'
 import { mapValues } from './utils'
 
 type Mapping<V> = {[key: string]: V}
-type CurriedReducer<S, A> = (action: A) => (prevState: S) => S
+type Updater<A, P, S> = (action: A) => (prevState: P) => S
+type PredicateFn<A, S> = (action: A, state: S) => boolean
 
-/**
- * Like `combineReducers`, but works with curried functions.
- *
- * More info: http://redux.js.org/docs/api/combineReducers.html
- */
-export function combineReducers(reducers: Mapping<CurriedReducer<*, *>>): CurriedReducer<*, *> {
-  const reducer = combineNormalReducers(
-    mapValues(reducers, fn => (s, a) => fn(a)(s))
+export function combineUpdaters(pathMap: Mapping<Updater<*,*,*>>): Updater<*,*,*> {
+  const reducer = combineReducers(
+    mapValues(pathMap, fn => (s, a) => fn(a)(s))
   )
   return action => state => reducer(state, action)
 }
 
-/**
- * Like `reduceReducers`, but takes and returns curried functions.
- *
- * More info: https://github.com/acdlite/reduce-reducers
- */
-export function reduceReducers(...reducers: CurriedReducer<*, *>[]): CurriedReducer<*, *> {
+export function pipeUpdaters(...updaters: Updater<*,*,*>[]): Updater<*,*,*> {
   return current => previous =>
-    reducers.reduce(
+    updaters.reduce(
       (p, r) => r(current)(p),
       previous
     )
+}
+
+export function filterUpdater(predicate: (string | PredicateFn<*,*>), updater: Updater<*,*,*>): Updater<*,*,*> {
+  return action => state => {
+    const doesMatch = (
+      (typeof predicate === 'function' && predicate(action, state))
+      || (typeof predicate === 'string' && predicate === action.type)
+    )
+
+    if (doesMatch) {
+      return updater(action)(state)
+    }
+
+    return state
+  }
+}
+
+export function createUpdater(actionMap: Mapping<Updater<*,*,*>>): Updater<*,*,*> {
+  const updaters = Object.keys(actionMap).map(
+    actionType => filterUpdater(actionType, actionMap[actionType])
+  )
+
+  return pipeUpdaters(...updaters)
 }
