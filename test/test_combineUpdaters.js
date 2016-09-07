@@ -1,15 +1,5 @@
-import { pipeUpdaters, combineUpdaters } from '../tmp/with-coverage';
-import { strictEqual, deepEqual } from 'assert';
-
-describe('pipeUpdaters', () => {
-  it('composes curried reducers left to right', () => {
-    const result = pipeUpdaters(
-      a => s => a + s,
-      a => s => a * s
-    )(5)(20)
-    strictEqual(result, 5 * (5 + 20))
-  });
-});
+import { combineUpdaters } from '../tmp/with-coverage';
+import { deepEqual } from 'assert'
 
 describe('combineUpdaters', () => {
   it('combines curried reducers', () => {

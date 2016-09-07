@@ -1,7 +1,7 @@
 // @flow
 
 import { combineReducers } from 'redux'
-import { mapValues } from './utils'
+import { mapValues, anyOf } from './utils'
 
 type Mapping<V> = {[key: string]: V}
 type Updater<A, P, S> = (action: A) => (prevState: P) => S
@@ -22,18 +22,34 @@ export function pipeUpdaters(...updaters: Updater<*,*,*>[]): Updater<*,*,*> {
     )
 }
 
-export function filterUpdater(predicate: (string | PredicateFn<*,*>), updater: Updater<*,*,*>): Updater<*,*,*> {
+type Predicate = string | PredicateFn<*,*> | Array<Predicate>
+
+export function filterUpdater(predicate: Predicate, leftUpdater?: Updater<*,*,*>, rightUpdater?: Updater<*,*,*>): Updater<*,*,*> {
+  if (leftUpdater == null) {
+    return (leftUpdater: Updater<*,*,*>, ...rest) => filterUpdater(predicate, leftUpdater, ...rest)
+  }
+
+  if (rightUpdater == null) {
+    return filterUpdater(predicate, leftUpdater, () => s => s)
+  }
+
+  const doesMatch = (predicate, action={}, state) => {
+    if (typeof predicate === 'string')
+      return predicate === action.type
+
+    if (Array.isArray(predicate))
+      return anyOf(...predicate.map(p => () => doesMatch(p, action, state)))
+
+    return Boolean(predicate(action, state))
+  }
+
   return action => state => {
-    const doesMatch = (
-      (typeof predicate === 'function' && predicate(action, state))
-      || (typeof predicate === 'string' && predicate === action.type)
-    )
+    if (leftUpdater != null && rightUpdater != null)
+      return doesMatch(predicate, action, state)
+        ? leftUpdater(action)(state)
+        : rightUpdater(action)(state)
 
-    if (doesMatch) {
-      return updater(action)(state)
-    }
-
-    return state
+    throw new Error('degenerate program state')
   }
 }
 

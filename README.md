@@ -9,7 +9,7 @@ Functional programming helpers for Redux.
 - [API reference](#api-reference)
   - [`pipeUpdaters(...updaters)`](#pipeupdatersupdaters)
   - [`combineUpdaters(pathMap)`](#combineupdaterspathmap)
-  - [`filterUpdater(predicate, updater)`](#filterupdaterpredicate-updater)
+  - [`filterUpdater(predicate, leftUpdater, rightUpdater?)`](#filterupdaterpredicate-leftupdater-rightupdater)
   - [`createUpdater(actionMap)`](#createupdateractionmap)
 
 ## Rationale
@@ -85,12 +85,6 @@ Client side usage (with a bundler):
 
 ## API reference
 
-- [`pipeUpdaters(...updaters)`](#pipeupdatersupdaters)
-- [`combineUpdaters(pathMap)`](#combineupdaterspathmap)
-- [`filterUpdater(predicate, updater)`](#filterupdaterpredicate-updater)
-- [`createUpdater(actionMap)`](#createupdateractionmap)
-
----
 
 ### `pipeUpdaters(...updaters)`
 
@@ -124,37 +118,53 @@ More info: http://redux.js.org/docs/api/combineReducers.html
 
 ---
 
-### `filterUpdater(predicate, updater)`
+### `filterUpdater(predicate, leftUpdater, rightUpdater?)`
 
-Create a proxy that delegates to `updater` or returns the state unchanged.
+Create a proxy that delegates to `leftUpdater` when predicate matches,
+and to `rightUpdater` otherwise.
 
-Delegation happens when the predicate "matches":  
+Note: `rightUpdater` is optional and defaults to state identity (`() => state => state`).
+
+The following rules apply to predicate matching:  
 *if `predicate` is a string, match when `action.type === predicate`,*  
-*else match when `!!predicate(action, state)`.*
+*if `predicate` is an array, match when any element matches,*  
+*else match when `predicate(action, state)` is truthy.*
+
+##### Type defs
+
+`Predicate`: `string | (action: mixed, state: mixed) => boolean | Array<Predicate>`
 
 #### Arguments
 
-1. `predicate: string | (action: mixed, state: mixed) => boolean`: action type or predicate function
-2. `updater: Updater`: updater to filter based on predicate
+1. `predicate: Predicate`: action type, array or predicate function
+2. `leftUpdater: Updater`: updater to call when predicate matches
+3. `rightUpdater?: Updater`: updater to call when predicate doesn't match  
+  * Default value: `() => state => state`
 
 #### Returns
 
 * `Updater`: filtered updater
 
-#### Example
+#### Examples
+
+##### Basic usage
 
 ```js
-import { filterUpdater } from 'redux-fp'
+const add = filterUpdater('ADD', action => state =>
+  state + action.payload
+)
 
-const updater = filterUpdater('PUSH', action => update('list', concat(action.payload)))
+assert(add({type: 'ADD', payload: 5})(5) === 10)
+assert(add({type: 'OTHER'})(10) === 10)
 ```
 
-is equivalent to
+`add` is equivalent to:
 
 ```js
-const updater = (action) => {
-  if (action.type === 'PUSH')
-    return update('list', concat(action.payload))
+function add(action) {
+  if (action.type === 'ADD') {
+    return state => state + action.payload
+  }
 
   return state => state
 }
@@ -164,10 +174,8 @@ const updater = (action) => {
 
 ### `createUpdater(actionMap)`
 
-Create a proxy that delegates to `actionMap[action.type]`
+Create a proxy that delegates to updaters in `actionMap` based on `action.type`
 or returns the state unchanged.
-
-Delegation happens when `!!actionMap[action.type]`.
 
 #### Arguments
 
@@ -180,18 +188,16 @@ Delegation happens when `!!actionMap[action.type]`.
 #### Example
 
 ```js
-import { createUpdater } from 'redux-fp'
-
 const updater = createUpdater({
   ADD: handleAdd,
   REMOVE: handleRemove
 })
 ```
 
-is equivalent to
+`updater` is equivalent to:
 
 ```js
-const updater = (action) => {
+function updater(action) {
   if (action.type === 'ADD') {
     return handleAdd(action)
   }
