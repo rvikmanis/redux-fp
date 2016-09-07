@@ -1,6 +1,6 @@
 {
   "name": "redux-fp",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Functional programming helpers for Redux.",
   "main": "dist/redux-fp.js",
   "module": "dist/redux-fp.mjs",
