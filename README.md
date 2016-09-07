@@ -3,6 +3,8 @@
 Functional programming helpers for Redux.
 
 [![Build Status](https://travis-ci.org/rvikmanis/redux-fp.svg?branch=master)](https://travis-ci.org/rvikmanis/redux-fp)
+[![Code Coverage](https://codecov.io/gh/rvikmanis/redux-fp/branch/master/graph/badge.svg)](https://codecov.io/gh/rvikmanis/redux-fp)
+
 
 - [Rationale](#rationale)
 - [Installation](#installation)
