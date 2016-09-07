@@ -1,4 +1,4 @@
-import { filterUpdater } from '../tmp/with-coverage';
+import { filterUpdater } from '../src';
 import { strictEqual } from 'assert';
 
 describe('filterUpdater', () => {
@@ -42,5 +42,30 @@ describe('filterUpdater', () => {
       actionUpdater({type: 'OTHER', payload: 19})(1),
       1
     )
+  })
+
+  const manyActionsUpdater = filterUpdater(
+    ['SET_VALUE', 'SET_VAL'], ({ payload }) => () => payload
+  )
+
+  it('if predicate is an array, matches if any of its elements match', () => {
+    let state = 'foo'
+
+    const setValResult = manyActionsUpdater({type: 'SET_VAL', payload: 'bar'})(state)
+    const setValueResult = manyActionsUpdater({type: 'SET_VALUE', payload: 'bar'})(state)
+    const otherResult = manyActionsUpdater({type: 'OTHER', payload: 'bar'})(state)
+
+    strictEqual(setValResult, 'bar')
+    strictEqual(setValueResult, 'bar')
+    strictEqual(otherResult, state)
+  })
+
+  it('if invoked with only a predicate, returns a function that accepts the rest of the arguments and returns a filtered updater', () => {
+    const updater = filterUpdater(a => a === 5)(
+      () => () => true
+    )
+
+    strictEqual(updater(5)(false), true)
+    strictEqual(updater(1)(false), false)
   })
 });

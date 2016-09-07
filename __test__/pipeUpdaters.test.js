@@ -1,4 +1,4 @@
-import { pipeUpdaters } from '../tmp/with-coverage';
+import { pipeUpdaters } from '../src';
 import { strictEqual } from 'assert';
 
 describe('pipeUpdaters', () => {
