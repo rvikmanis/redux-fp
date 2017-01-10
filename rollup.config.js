@@ -1,6 +1,5 @@
 import babel from 'rollup-plugin-babel';
 import babelrc from 'babelrc-rollup';
-import istanbul from 'rollup-plugin-istanbul';
 import nodeResolve from 'rollup-plugin-node-resolve'
 import commonJs from 'rollup-plugin-commonjs'
 
@@ -9,11 +8,6 @@ let external = Object.keys(pkg.dependencies);
 
 let plugins = [
   babel(babelrc()),
-  process.env.TESTING
-    ? istanbul({
-        exclude: ['test/**/*', 'node_modules/**/*']
-      })
-    : null,
   nodeResolve({
     module: true,
     jsnext: true,
