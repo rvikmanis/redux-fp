@@ -1,62 +1,186 @@
-// @flow
+export { pipeUpdaters, filterUpdater, createUpdater } from './old'
 
-import { combineReducers } from 'redux'
-import { mapValues, anyOf } from './utils'
+import dotProp from 'dot-prop-immutable'
+import compose from 'compose-function'
 
-type Mapping<V> = {[key: string]: V}
-type Updater<A, P, S> = (action: A) => (prevState: P) => S
-type PredicateFn<A, S> = (action: A, state: S) => boolean
+let warning = {}
 
-export function combineUpdaters(pathMap: Mapping<Updater<*,*,*>>): Updater<*,*,*> {
-  const reducer = combineReducers(
-    mapValues(pathMap, fn => (s, a) => fn(a)(s))
-  )
-  return action => state => reducer(state, action)
+/**
+ * Higher-order updater.
+ *
+ * Calls `leftUpdater` if `predicateUpdater` returns true,
+ * else calls `rightUpdater`, if it exists, or returns the state unchanged.
+ */
+export const match = (predicateUpdater: (action: mixed) => (state: mixed) => boolean, leftUpdater: Updater, rightUpdater: ?Updater): Updater => {
+  if (leftUpdater !== undefined) {
+    return action => state => predicateUpdater(action)(state)
+      ? leftUpdater(action)(state)
+      : (rightUpdater !== undefined ? rightUpdater(action)(state) : state)
+  }
+
+  return (leftUpdater, rightUpdater) => match(predicateUpdater, leftUpdater, rightUpdater)
 }
 
-export function pipeUpdaters(...updaters: Updater<*,*,*>[]): Updater<*,*,*> {
-  return current => previous =>
-    updaters.reduce(
-      (p, r) => r(current)(p),
-      previous
+/**
+ * Higher-order updater.
+ *
+ * Sets the state that `updater` will receive initially.
+ */
+export const withDefaultState = (defaultState: mixed, updater: Updater): Updater => {
+  if (updater !== undefined) {
+    return match(() => state => state === undefined)(
+      action => () => updater(action)(defaultState),
+      updater
     )
+  }
+
+  return updater => withDefaultState(defaultState, updater)
 }
 
-type Predicate = string | PredicateFn<*,*> | Array<Predicate>
-
-export function filterUpdater(predicate: Predicate, leftUpdater?: Updater<*,*,*>, rightUpdater?: Updater<*,*,*>): Updater<*,*,*> {
-  if (leftUpdater == null) {
-    return (leftUpdater: Updater<*,*,*>, ...rest) => filterUpdater(predicate, leftUpdater, ...rest)
-  }
-
-  if (rightUpdater == null) {
-    return filterUpdater(predicate, leftUpdater, () => s => s)
-  }
-
-  const doesMatch = (predicate, action={}, state) => {
-    if (typeof predicate === 'string')
-      return predicate === action.type
-
-    if (Array.isArray(predicate))
-      return anyOf(...predicate.map(p => () => doesMatch(p, action, state)))
-
-    return Boolean(predicate(action, state))
-  }
-
-  return action => state => {
-    if (leftUpdater != null && rightUpdater != null)
-      return doesMatch(predicate, action, state)
-        ? leftUpdater(action)(state)
-        : rightUpdater(action)(state)
-
-    throw new Error('degenerate program state')
-  }
+/**
+ * Higher-order updater.
+ *
+ * Calls `updaters` sequentially from left to right.
+ * Each updater gets the state returned from previous updater.
+ * @param {...Updater} updaters
+ */
+export const concat = (...updaters): Updater => action => state => {
+  return updaters.reduce((s, updater) => updater(action)(s), state)
 }
 
-export function createUpdater(actionMap: Mapping<Updater<*,*,*>>): Updater<*,*,*> {
-  const updaters = Object.keys(actionMap).map(
-    actionType => filterUpdater(actionType, actionMap[actionType])
+/**
+ * Higher-order updater.
+ *
+ * Like [`combineReducers`](http://redux.js.org/docs/api/combineReducers.html), but for updaters.
+ *
+ *
+ * @example
+ * combine({
+ *   foo: fooUpdater,
+ *   bar: barUpdater
+ * })
+ * // Is equivalent to
+ * concat(
+ *   updateState('foo', fooUpdater),
+ *   updateState('bar', barUpdater)
+ * )
+ *
+ */
+export const combine = (pathFragmentUpdaterMap: Object): Updater => withDefaultState({}, concat(
+  ...Object.keys(pathFragmentUpdaterMap)
+    .map(k => updateState(k, pathFragmentUpdaterMap[k]))
+))
+
+/**
+ * @private
+ */
+export const combineUpdaters = (...args) => {
+  if (!warning.combineUpdaters) {
+    warning.combineUpdaters = true
+    // eslint-disable-next-line
+    console.warn('Warning: combineUpdaters(...updaters) is deprecated. Use combine(...updaters)')
+  }
+  return combine(...args)
+}
+
+/**
+ * Higher-order updater.
+ *
+ * Calls `updater` if `actionType` matches, or returns the state unchanged.
+ *
+ *
+ * @example
+ * handleAction('SOME_ACTION', someUpdater)
+ * // Is equivalent to
+ * match(action => () => action.type === 'SOME_ACTION', someUpdater)
+ */
+export const handleAction = (actionType: string, updater: Updater): Updater => {
+  return match(
+    action => () => action.type === actionType,
+    updater
   )
-
-  return pipeUpdaters(...updaters)
 }
+
+/**
+ * Higher-order updater.
+ *
+ * Delegates to matching updater in `actionTypeUpdaterMap`, or returns the state unchanged.
+ *
+ *
+ * @example
+ * handleActions({
+ *   ACTION_ONE: updaterOne,
+ *   ACTION_TWO: updaterTwo
+ * })
+ * // Is equivalent to
+ * concat(
+ *   handleAction('ACTION_ONE', updaterOne),
+ *   handleAction('ACTION_TWO', updaterTwo)
+ * )
+ */
+export const handleActions = (actionTypeUpdaterMap: Object): Updater => concat(
+  ...Object.keys(actionTypeUpdaterMap)
+    .map(k => handleAction(k, actionTypeUpdaterMap[k]))
+)
+
+export const select = (mappingUpdater, updater) => {
+  if (updater !== undefined) {
+    return action => state => updater(mappingUpdater(action)(state))(state)
+  }
+
+  return updater => select(mappingUpdater, updater)
+}
+
+/**
+ * Higher-order updater.
+ *
+ * Calls `updater` with incoming state focused to `path`. Saves the result in state at `path`.
+ *
+ *
+ * @example
+ * const updater = updateState('a.b', () => b => b + 1)
+ * updater()({ a: { b: 1 }, c: 0 })
+ * // Result: `{ a: { b: 2 }, c: 0 }`
+ */
+export const updateState = (path: string, updater: Updater): Updater => {
+  if (updater !== undefined) {
+    return action => state => {
+      return dotProp.set(state, path, v => {
+        if (dotProp.get(state, path) !== undefined) {
+          return updater(action)(v)
+        }
+        return updater(action)(undefined)
+      })
+    }
+  }
+
+  return updater => updateState(path, updater)
+}
+
+export const mapState = updater => action => state => {
+  return state.map(updater(action))
+}
+
+export const filterState = updater => action => state => {
+  return state.filter(updater(action))
+}
+
+export const replaceState = (path) => updateState(path, action => () => action)
+
+export const constantState = value => () => () => value
+
+export const decorate = (...args) => {
+  const updater = args.slice(-1)[0]
+  const enhancers = args.slice(0, -1)
+
+  if (enhancers.length === 0) {
+    return updater
+  }
+
+  return compose(...enhancers)(updater)
+}
+
+/**
+ * Action-first curried reducer.
+ */
+type Updater = (action: mixed) => (state: mixed) => mixed
