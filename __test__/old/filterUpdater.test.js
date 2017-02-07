@@ -1,4 +1,4 @@
-import { filterUpdater } from '../src';
+import { filterUpdater } from '../../src';
 import { strictEqual } from 'assert';
 
 describe('filterUpdater', () => {

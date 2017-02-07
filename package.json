@@ -2,21 +2,19 @@
   "name": "redux-fp",
   "version": "0.1.2",
   "description": "Functional programming helpers for Redux.",
-  "main": "dist/redux-fp.min.js",
-  "umd:main": "dist/redux-fp.umd.js",
+  "main": "dist/redux-fp.js",
   "module": "dist/redux-fp.mjs",
   "jsnext:main": "dist/redux-fp.mjs",
   "scripts": {
-    "clean:test": "rm -rf coverage",
-    "clean:build": "rm -rf dist",
-    "prebuild": "eslint .",
-    "build": "npm run clean:build && rollup -c && babili --source-maps=true -o dist/redux-fp.min.js dist/redux-fp.umd.js",
-    "watch": "npm run clean:build && rollup -c -w",
-    "pretest": "npm run clean:test && npm run build",
-    "test": "flow && jest",
-    "prepublish": "npm test && npm run build",
-    "docs": "documentation build src/index.js -f md -o API.md",
-    "docs:watch": "documentation build src/index.js -w -f md -o API.md"
+    "prebuild": "rm -rf dist",
+    "build": "rollup -c && babili --source-maps=true -o dist/redux-fp.min.js dist/redux-fp.js",
+    "pretest": "rm -rf coverage",
+    "test": "eslint . && jest",
+    "predocs": "rm -rf docs",
+    "docs": "mkdir -p docs && documentation build src/index.js -f md -o docs/API.md",
+    "prepublish": "in-publish && (npm run all) || echo 'Not in-publish'",
+    "all": "npm test && npm run build && npm run docs",
+    "clean": "npm run pretest && npm run prebuild && npm run predocs"
   },
   "repository": {
     "type": "git",
@@ -45,7 +43,9 @@
     "dist"
   ],
   "homepage": "https://github.com/rvikmanis/redux-fp#readme",
-  "dependencies": {},
+  "dependencies": {
+    "in-publish": "^2.0.0"
+  },
   "devDependencies": {
     "babel-eslint": "6.1.2",
     "babel-jest": "^15.0.0",
@@ -61,7 +61,7 @@
     "dot-prop-immutable": "^1.3.1",
     "eslint": "3.2.2",
     "flow-bin": "0.30.0",
-    "jest-cli": "^15.1.1",
+    "jest-cli": "18.1.0",
     "rollup": "^0.41.1",
     "rollup-plugin-babel": "^2.7.1",
     "rollup-plugin-commonjs": "^7.0.0",
@@ -70,6 +70,7 @@
   },
   "jest": {
     "coverageDirectory": "coverage",
-    "collectCoverage": true
+    "collectCoverage": true,
+    "verbose": true
   }
 }

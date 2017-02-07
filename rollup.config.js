@@ -26,7 +26,7 @@ let configuration = {
   external: external,
   targets: [
     {
-      dest: pkg['umd:main'],
+      dest: pkg['main'],
       format: 'umd',
       moduleName: 'ReduxFp',
       sourceMap: true

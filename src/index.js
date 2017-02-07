@@ -6,10 +6,40 @@ import compose from 'compose-function'
 let warning = {}
 
 /**
- * Higher-order updater.
+ * **Syntax**
+ * ```javascript
+ * match(predicateUpdater, leftUpdater)
+ * ```
  *
- * Calls `leftUpdater` if `predicateUpdater` returns true,
- * else calls `rightUpdater`, if it exists, or returns the state unchanged.
+ * ```javascript
+ * match(predicateUpdater, leftUpdater, rightUpdater)
+ * ```
+ *
+ * ```javascript
+ * match(predicateUpdater)(leftUpdater)
+ * ```
+ *
+ * ```javascript
+ * match(predicateUpdater)(leftUpdater, rightUpdater)
+ * ```
+ *
+ * **Description**
+ *
+ * Creates a proxy updater that:
+ *
+ * - calls **`leftUpdater`** if `predicateUpdater` returns true, or
+ * - calls **`rightUpdater`** if `predicateUpdater` returns false and `rightUpdater` is defined, or
+ * - returns the state unchanged if `predicateUpdater` returns false and `rightUpdater` is undefined.
+ *
+ * @example
+ * match(p, t, f)
+ * // Is equivalent to
+ * action => state => p(action)(state) ? t(action)(state) : f(action)(state)
+ *
+ * @example
+ * match(p, t)
+ * // Is equivalent to
+ * action => state => p(action)(state) ? t(action)(state) : state
  */
 export const match = (predicateUpdater: (action: mixed) => (state: mixed) => boolean, leftUpdater: Updater, rightUpdater: ?Updater): Updater => {
   if (leftUpdater !== undefined) {
@@ -22,9 +52,24 @@ export const match = (predicateUpdater: (action: mixed) => (state: mixed) => boo
 }
 
 /**
- * Higher-order updater.
+ * **Syntax**
+ * ```javascript
+ * withDefaultState(defaultState, updater)
+ * ```
  *
- * Sets the state that `updater` will receive initially.
+ * ```javascript
+ * withDefaultState(defaultState)(updater)
+ * ```
+ *
+ * **Description**
+ *
+ * Creates a proxy updater that:
+ *
+ * calls `updater` with `defaultState` if incoming state is undefined, or calls it with the incoming state.
+ * @example
+ * withDefaultState(0, add)
+ * // Is equivalent to
+ * action => (state = 0) => add(action)(state)
  */
 export const withDefaultState = (defaultState: mixed, updater: Updater): Updater => {
   if (updater !== undefined) {
@@ -38,21 +83,35 @@ export const withDefaultState = (defaultState: mixed, updater: Updater): Updater
 }
 
 /**
- * Higher-order updater.
+ * **Syntax**
+ * ```javascript
+ * concat(...updaters)
+ * ```
  *
- * Calls `updaters` sequentially from left to right.
- * Each updater gets the state returned from previous updater.
+ * **Description**
+ *
+ * Creates a proxy updater that:
+ *
+ * calls each updater with the preceding updater's outgoing state (left-to-right).
  * @param {...Updater} updaters
+ * @example
+ * concat(f, g, h)
+ * // Is equivalent to
+ * action => state => h(action)(g(action)(f(action)(state)))
  */
 export const concat = (...updaters): Updater => action => state => {
   return updaters.reduce((s, updater) => updater(action)(s), state)
 }
 
 /**
- * Higher-order updater.
+ * **Syntax**
+ * ```javascript
+ * combine(pathFragmentUpdaterMap)
+ * ```
+ *
+ * **Description**
  *
  * Like [`combineReducers`](http://redux.js.org/docs/api/combineReducers.html), but for updaters.
- *
  *
  * @example
  * combine({
@@ -61,14 +120,14 @@ export const concat = (...updaters): Updater => action => state => {
  * })
  * // Is equivalent to
  * concat(
- *   updateState('foo', fooUpdater),
- *   updateState('bar', barUpdater)
+ *   updateStateAt('foo', fooUpdater),
+ *   updateStateAt('bar', barUpdater)
  * )
  *
  */
 export const combine = (pathFragmentUpdaterMap: Object): Updater => withDefaultState({}, concat(
   ...Object.keys(pathFragmentUpdaterMap)
-    .map(k => updateState(k, pathFragmentUpdaterMap[k]))
+    .map(k => updateStateAt(k, pathFragmentUpdaterMap[k]))
 ))
 
 /**
@@ -78,33 +137,53 @@ export const combineUpdaters = (...args) => {
   if (!warning.combineUpdaters) {
     warning.combineUpdaters = true
     // eslint-disable-next-line
-    console.warn('Warning: combineUpdaters(...updaters) is deprecated. Use combine(...updaters)')
+    console.warn('Warning: combineUpdaters(pathMap) is deprecated. Use combine(pathFragmentUpdaterMap)')
   }
   return combine(...args)
 }
 
 /**
- * Higher-order updater.
+ * **Syntax**
+ * ```javascript
+ * handleAction(actionType, updater)
+ * ```
  *
- * Calls `updater` if `actionType` matches, or returns the state unchanged.
+ * ```javascript
+ * handleAction(actionType)(updater)
+ * ```
  *
+ * **Description**
  *
+ * Creates a proxy updater that:
+ *
+ * calls `updater` if `actionType` matches incoming action's type, or returns the state unchanged.
  * @example
  * handleAction('SOME_ACTION', someUpdater)
  * // Is equivalent to
  * match(action => () => action.type === 'SOME_ACTION', someUpdater)
  */
 export const handleAction = (actionType: string, updater: Updater): Updater => {
-  return match(
-    action => () => action.type === actionType,
-    updater
-  )
+  if (updater !== undefined) {
+    return match(
+      action => () => typeof action === 'object' && action != null && action.type === actionType,
+      updater
+    )
+  }
+
+  return updater => handleAction(actionType, updater)
 }
 
 /**
- * Higher-order updater.
+ * **Syntax**
+ * ```javascript
+ * handleActions(actionTypeUpdaterMap)
+ * ```
  *
- * Delegates to matching updater in `actionTypeUpdaterMap`, or returns the state unchanged.
+ * **Description**
+ *
+ * Creates a proxy updater that:
+ *
+ * delegates to a matching updater from `actionTypeUpdaterMap` based on the incoming action's type, or returns the state unchanged.
  *
  *
  * @example
@@ -123,26 +202,31 @@ export const handleActions = (actionTypeUpdaterMap: Object): Updater => concat(
     .map(k => handleAction(k, actionTypeUpdaterMap[k]))
 )
 
-export const select = (mappingUpdater, updater) => {
-  if (updater !== undefined) {
-    return action => state => updater(mappingUpdater(action)(state))(state)
-  }
-
-  return updater => select(mappingUpdater, updater)
-}
-
 /**
- * Higher-order updater.
+ * **Syntax**
+ * ```javascript
+ * updateStateAt(path, updater)
+ * ```
  *
- * Calls `updater` with incoming state focused to `path`. Saves the result in state at `path`.
+ * ```javascript
+ * updateStateAt(path)(updater)
+ * ```
+ *
+ * **Description**
+ *
+ * Creates a proxy updater that:
+ *
+ * calls `updater` with incoming state focused at `path`, then merges the result into outgoing state.
  *
  *
  * @example
- * const updater = updateState('a.b', () => b => b + 1)
- * updater()({ a: { b: 1 }, c: 0 })
+ * const updater = updateStateAt('a.b', () => state => state + 1)
+ * const state = { a: { b: 1 }, c: 0 }
+ *
+ * updater()(state)
  * // Result: `{ a: { b: 2 }, c: 0 }`
  */
-export const updateState = (path: string, updater: Updater): Updater => {
+export const updateStateAt = (path: string, updater: Updater): Updater => {
   if (updater !== undefined) {
     return action => state => {
       return dotProp.set(state, path, v => {
@@ -154,30 +238,101 @@ export const updateState = (path: string, updater: Updater): Updater => {
     }
   }
 
-  return updater => updateState(path, updater)
+  return updater => updateStateAt(path, updater)
 }
 
-export const mapState = updater => action => state => {
+/**
+ * **Syntax**
+ * ```javascript
+ * mapState(updater)
+ * ```
+ *
+ * **Description**
+ *
+ * Creates a proxy updater that:
+ *
+ * maps incoming state via `updater` as iteratee.
+ *
+ * @example
+ * mapState(action => state => state + action)
+ * // Is equivalent to
+ * action => state => state.map(item => item + action)
+ */
+export const mapState = (updater: Updater): Updater => action => state => {
   return state.map(updater(action))
 }
 
-export const filterState = updater => action => state => {
+/**
+ * **Syntax**
+ * ```javascript
+ * filterState(updater)
+ * ```
+ *
+ * **Description**
+ *
+ * Creates a proxy updater that:
+ *
+ * filters incoming state via `updater` as predicate.
+ * @example
+ * filterState(action => state => action > state)
+ * // Is equivalent to
+ * action => state => state.filter(item => action > item)
+ */
+export const filterState = (updater: (action: mixed) => (state: mixed) => boolean): Updater => action => state => {
   return state.filter(updater(action))
 }
 
-export const replaceState = (path) => updateState(path, action => () => action)
+/**
+ * **Syntax**
+ * ```javascript
+ * constantState(value)
+ * ```
+ *
+ * **Description**
+ *
+ * Creates an updater that always returns `value`.
+ * @example
+ * constantState('foo')
+ * // Is equivalent to
+ * () => () => 'foo'
+*/
+export const constantState = (value: mixed): Updater => () => () => value
 
-export const constantState = value => () => () => value
+/**
+ * **Syntax**
+ * ```javascript
+ * decorate(...fns, value)
+ * ```
+ *
+ * **Description**
+ *
+ * Applies to `value` a function created by composing `...fns`.
+ *
+ * @example
+ * decorate(f, g, h, value)
+ * // Is equivalent to
+ * f(g(h(value)))
+ * @example
+ * decorate(
+ *   withDefaultState(0),
+ *   handleAction('ADD'),
+ *   action => state => state + action.payload
+ * )
+ * // Is equivalent to
+ * withDefaultState(0, handleAction('ADD', action => state => state + action.payload))
+ * @param {...Function} fns
+ * @param {any} value
+ * @returns {any}
+*/
+export const decorate = (...fns) => {
+  const value = fns.slice(-1)[0]
+  fns = fns.slice(0, -1)
 
-export const decorate = (...args) => {
-  const updater = args.slice(-1)[0]
-  const enhancers = args.slice(0, -1)
-
-  if (enhancers.length === 0) {
-    return updater
+  if (fns.length === 0) {
+    return value
   }
 
-  return compose(...enhancers)(updater)
+  return compose(...fns)(value)
 }
 
 /**

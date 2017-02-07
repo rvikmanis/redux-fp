@@ -1,17 +1,12 @@
-// @flow
 /* eslint-disable */
-
-type Mapping<V> = {[key: string]: V}
-type Updater<A, P, S> = (action: A) => (prevState: P) => S
-type PredicateFn<A, S> = (action: A, state: S) => boolean
 
 let warnings = {}
 
 /**
  * @private
  */
-export function pipeUpdaters(...updaters: Updater<*,*,*>[]): Updater <*,*,*> {
-  if(!warnings.pipeUpdaters) {
+export function pipeUpdaters(...updaters) {
+  if (!warnings.pipeUpdaters) {
     warnings.pipeUpdaters = true
     console.warn('Warning: pipeUpdaters(...updaters) is deprecated. Use concat(...updaters)')
   }
@@ -23,8 +18,6 @@ export function pipeUpdaters(...updaters: Updater<*,*,*>[]): Updater <*,*,*> {
     )
 }
 
-type Predicate = string | PredicateFn<*,*> | Array<Predicate>
-
 function anyOf(...args) {
   return args.reduce((c, n) => !!c || !!n(), false)
 }
@@ -32,16 +25,21 @@ function anyOf(...args) {
 /**
  * @private
  */
-export function filterUpdater(predicate: Predicate, leftUpdater?: Updater<*,*,*>, rightUpdater?: Updater<*,*,*>): Updater<*,*,*> {
+export function filterUpdater(predicate, leftUpdater?, rightUpdater?) {
+  if (!warnings.filterUpdater) {
+    warnings.filterUpdater = true
+    console.warn('Warning: filterUpdater(predicate, leftUpdater, rightUpdater) is deprecated. Use match(predicateUpdater, leftUpdater, rightUpdater)')
+  }
+
   if (leftUpdater == null) {
-    return (leftUpdater: Updater<*,*,*>, ...rest) => filterUpdater(predicate, leftUpdater, ...rest)
+    return (leftUpdater, ...rest) => filterUpdater(predicate, leftUpdater, ...rest)
   }
 
   if (rightUpdater == null) {
     return filterUpdater(predicate, leftUpdater, () => s => s)
   }
 
-  const doesMatch = (predicate, action={}, state) => {
+  const doesMatch = (predicate, action = {}, state) => {
     if (typeof predicate === 'string')
       return predicate === action.type
 
@@ -56,15 +54,17 @@ export function filterUpdater(predicate: Predicate, leftUpdater?: Updater<*,*,*>
       return doesMatch(predicate, action, state)
         ? leftUpdater(action)(state)
         : rightUpdater(action)(state)
-
-    throw new Error('degenerate program state')
   }
 }
 
 /**
  * @private
  */
-export function createUpdater(actionMap: Mapping<Updater<*,*,*>>): Updater<*,*,*> {
+export function createUpdater(actionMap) {
+  if (!warnings.createUpdater) {
+    warnings.createUpdater = true
+    console.warn('Warning: createUpdater(actionMap) is deprecated. Use handleActions(actionTypeUpdaterMap)')
+  }
   const updaters = Object.keys(actionMap).map(
     actionType => filterUpdater(actionType, actionMap[actionType])
   )
