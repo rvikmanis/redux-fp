@@ -7,7 +7,7 @@ Functional programming helpers for Redux.
 
 **Table of contents**
 
-- [Introduction](#introduction)
+- [Reducers vs. updaters](#reducers-vs-updaters)
 - [Installation](#installation)
 - [API reference](#api-reference)
 
