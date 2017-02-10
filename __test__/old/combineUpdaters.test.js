@@ -1,4 +1,4 @@
-import { combineUpdaters } from '../src';
+import { combineUpdaters } from '../../src';
 import { deepEqual } from 'assert'
 
 describe('combineUpdaters', () => {

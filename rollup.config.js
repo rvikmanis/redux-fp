@@ -7,13 +7,15 @@ let pkg = require('./package.json');
 let external = Object.keys(pkg.dependencies);
 
 let plugins = [
-  babel(babelrc()),
   nodeResolve({
     module: true,
     jsnext: true,
     main: true
   }),
-  commonJs({})
+  commonJs({
+    include: 'node_modules/**'
+  }),
+  babel(babelrc())
 ]
 
 plugins = plugins.filter(Boolean)
@@ -26,7 +28,7 @@ let configuration = {
     {
       dest: pkg['main'],
       format: 'umd',
-      moduleName: 'ReduxUpdaters',
+      moduleName: 'ReduxFp',
       sourceMap: true
     },
     {
@@ -36,11 +38,5 @@ let configuration = {
     }
   ]
 };
-
-if (process.env.TESTING) {
-  configuration.targets = [{
-    dest: 'tmp/with-coverage.js'
-  }]
-}
 
 export default configuration
