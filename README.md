@@ -7,25 +7,59 @@ Functional programming helpers for Redux.
 
 **Table of contents**
 
-- [Reducers vs. updaters](#reducers-vs-updaters)
+- [Updaters vs. reducers](#updaters-vs-reducers)
+- [Purpose](#purpose)
 - [Installation](#installation)
 - [API reference](#api-reference)
 
-## Reducers vs. updaters
+## Updaters vs. reducers
 
-Introducing the concept of **updater** - a curried form of reducer with inverted argument order:
+*Updater* is a type of function that takes an action and
+returns another function that takes the state and produces a result.
 
 ```javascript
-const updater = action => state => {
+action => state => {
   // Do something
 }
 ```
 
-Updaters are well suited for composition with tacit functional tools like lodash/fp or Ramda.
+Yes, they are just curried reducers with reversed argument order.
 
-All redux-fp utilities work on updaters.
+### Using with utility libraries
 
-For interoperability with Redux, use `(state, action) => updater(action)(state)`
+Unlike reducers, updaters compose nicely with existing tools like lodash/fp or Ramda.
+
+Let's create an updater that replaces a part
+of the state with the action's payload. We will use lodash/fp's `set` helper to illustrate the point.
+
+```javascript
+import { set } from 'lodash/fp'
+const changeFoo = action => set('foo', action.payload)
+```
+
+Note that I've eliminated state from the definition of our updater, and called `set` with two, not three, arguments.
+This works because when `set` is called without
+the third argument, it returns a function that takes the missing argument and produces a result.
+That function becomes the inner function of our updater and receives the state.
+
+The paradigm is called [point-free style](https://en.wikipedia.org/wiki/Tacit_programming), and
+if you're not familiar with it, check out
+[Lucas Reis' introductory article](http://lucasmreis.github.io/blog/pointfree-javascript/).
+
+### Compatibility
+
+To create a Redux store, just wrap the root updater in a reducer:
+
+```javascript
+createStore((s, a) => updater(a)(s))
+```
+
+## Purpose
+
+*redux-fp* provides a set of useful utilities and enhancers like `combine`, `withDefaultState` or `mapState`
+that help working with updaters.
+
+Check out the [API reference](#api-reference) for a full list of helpers, complete with descriptions and usage examples.
 
 ## Installation
 
@@ -43,7 +77,7 @@ Or as a development dependency:
 <script src="https://unpkg.com/redux-fp/dist/redux-fp.min.js"></script>
 ```
 
-API exposed at `window.ReduxFp`.
+Makes the library available globally as `ReduxFp`.
 
 ## API reference
 
